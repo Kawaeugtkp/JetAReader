@@ -21,7 +21,7 @@ enum class ReaderScreens {
             UpdateScreen.name -> UpdateScreen
             ReaderStatsScreen.name -> ReaderStatsScreen
             null -> ReaderHomeScreen
-            else -> throw IllegalArgumentException("TOute $route is not recognized")
+            else -> throw IllegalArgumentException("Route $route is not recognized")
         }
     }
 }
