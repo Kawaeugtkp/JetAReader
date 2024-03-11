@@ -33,9 +33,12 @@ import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.google.firebase.firestore.FirebaseFirestore
 import jp.gardenall.areader.components.ReaderAppBar
+import jp.gardenall.areader.components.RoundedButton
 import jp.gardenall.areader.data.Resource
 import jp.gardenall.areader.model.Item
+import jp.gardenall.areader.model.MBook
 import jp.gardenall.areader.navigation.ReaderScreens
 
 @Composable
@@ -142,4 +145,26 @@ fun ShowBookDetails(bookInfo: Resource<Item>, navController: NavController) {
             }
         }
     }
+
+    // Buttons
+    Row(
+        modifier = Modifier.padding(top = 6.dp),
+        horizontalArrangement = Arrangement.SpaceAround
+    ) {
+        RoundedButton(label = "Save") {
+            // save this book to the firestore database
+            val book = MBook()
+            saveToFirebase(book)
+        }
+
+        Spacer(modifier = Modifier.width(25.dp))
+
+        RoundedButton(label = "Cancel") {
+
+        }
+    }
+}
+
+fun saveToFirebase(book: MBook) {
+    val db = FirebaseFirestore.getInstance()
 }
