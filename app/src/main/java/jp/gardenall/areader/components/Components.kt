@@ -1,5 +1,8 @@
 package jp.gardenall.areader.components
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +39,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -394,6 +402,39 @@ fun RoundedButton(
             Text(
                 text = label,
                 style = TextStyle(color = Color.White, fontSize = 15.sp)
+            )
+        }
+    }
+}
+
+@Composable
+fun RatingBar(
+    modifier: Modifier = Modifier,
+    rating: Int,
+    onPressRating: (Int) -> Unit
+) {
+    var ratingState by remember {
+        mutableIntStateOf(rating)
+    }
+    
+    var selected by remember {
+        mutableStateOf(false)
+    }
+    
+    val size by animateDpAsState(targetValue = if (selected) 42.dp else 34.dp, spring(Spring.DampingRatioMediumBouncy))
+    
+    Row(
+        modifier = Modifier.width(280.dp), 
+        verticalAlignment = Alignment.CenterVertically, 
+        horizontalArrangement = Arrangement.Center
+    ) {
+        for (i in 1..5) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "star",
+                modifier = modifier
+                    .width(size)
+                    .height(size)
             )
         }
     }
