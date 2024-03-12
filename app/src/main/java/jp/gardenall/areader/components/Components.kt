@@ -265,10 +265,9 @@ fun FABContent(onTap: () -> Unit) {
     }
 }
 
-@Preview
 @Composable
 fun ListCard(
-    book: MBook = MBook("asdf", "Running", "Me and you", "hello world"),
+    book: MBook,
     onPressDetails: (String) -> Unit= {}
 ) {
     val context = LocalContext.current
@@ -293,7 +292,7 @@ fun ListCard(
         ) {
             Row(horizontalArrangement = Arrangement.Center) {
                 AsyncImage(
-                    model = "http://books.google.com/books/content?id=8MKsuAAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+                    model = book.photoUrl.toString(),
                     contentDescription = "book image",
                     modifier = Modifier
                         .height(140.dp)

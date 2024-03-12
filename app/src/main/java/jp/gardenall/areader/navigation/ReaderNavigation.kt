@@ -11,10 +11,12 @@ import androidx.navigation.navArgument
 import jp.gardenall.areader.screens.ReaderSplashScreen
 import jp.gardenall.areader.screens.details.ReaderBookDetailsScreen
 import jp.gardenall.areader.screens.home.Home
+import jp.gardenall.areader.screens.home.HomeScreenViewModel
 import jp.gardenall.areader.screens.login.ReaderLoginScreen
 import jp.gardenall.areader.screens.search.BookSearchViewModel
 import jp.gardenall.areader.screens.search.SearchScreen
 import jp.gardenall.areader.screens.stats.ReaderStatsScreen
+import jp.gardenall.areader.screens.update.BookUpdateScreen
 
 @Composable
 fun ReaderNavigation() {
@@ -25,7 +27,8 @@ fun ReaderNavigation() {
         }
 
         composable(ReaderScreens.ReaderHomeScreen.name) {
-            Home(navController = navController)
+            val homeViewModel = hiltViewModel<HomeScreenViewModel>()
+            Home(navController = navController, viewModel = homeViewModel)
         }
 
         composable(ReaderScreens.ReaderStatsScreen.name) {
@@ -48,6 +51,15 @@ fun ReaderNavigation() {
             backStackEntry.arguments?.getString("bookId").let {
                 Log.d("NAV", "ReaderNavigation: $it")
                 ReaderBookDetailsScreen(navController = navController, bookId = it.toString())
+            }
+        }
+
+        val updateName = ReaderScreens.UpdateScreen.name
+        composable("$updateName/{bookItemId}", arguments = listOf(navArgument("bookItemId") {
+            type = NavType.StringType
+        })) { navBackStackEntry ->
+            navBackStackEntry.arguments?.getString("bookItemId").let {
+                BookUpdateScreen(navController = navController, bookItemId = it.toString())
             }
         }
     }
