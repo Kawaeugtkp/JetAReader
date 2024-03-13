@@ -1,5 +1,8 @@
 package jp.gardenall.areader.components
 
+import android.content.Context
+import android.view.MotionEvent
+import android.widget.Toast
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -45,11 +48,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
@@ -321,7 +326,7 @@ fun ListCard(
                         modifier = Modifier.padding(bottom = 1.dp)
                     )
 
-                    BookRating(score = 3.5)
+                    BookRating(score = book.rating!!)
                 }
             }
 
@@ -340,12 +345,18 @@ fun ListCard(
             )
         }
 
+        val isStartedReading = remember {
+            mutableStateOf(false)
+        }
+
         Row(
             modifier = Modifier.align(Alignment.End),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.Bottom
         ) {
-            RoundedButton(label = "Reading", radius = 70)
+            isStartedReading.value = book.startedReading != null
+
+            RoundedButton(label = if (isStartedReading.value) "Reading" else "Not Yet", radius = 70)
         }
     }
 }
@@ -407,6 +418,7 @@ fun RoundedButton(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun RatingBar(
     modifier: Modifier = Modifier,
@@ -435,7 +447,26 @@ fun RatingBar(
                 modifier = modifier
                     .width(size)
                     .height(size)
+                    .pointerInteropFilter {
+                        when (it.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                selected = true
+                                onPressRating(i)
+                                ratingState = i
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                selected = false
+                            }
+                        }
+                        true
+                    },
+                tint = if (i <= ratingState) Color(0xFFFFD700) else Color(0xFFA2ADB1)
             )
         }
     }
+}
+
+fun showToast(context: Context, msg: String) {
+    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 }

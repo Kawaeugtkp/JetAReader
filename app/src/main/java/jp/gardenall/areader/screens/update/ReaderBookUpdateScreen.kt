@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
@@ -27,6 +28,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -36,18 +39,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
+import jp.gardenall.areader.R
 import jp.gardenall.areader.components.InputField
+import jp.gardenall.areader.components.RatingBar
 import jp.gardenall.areader.components.ReaderAppBar
+import jp.gardenall.areader.components.RoundedButton
+import jp.gardenall.areader.components.showToast
 import jp.gardenall.areader.data.DataOrException
 import jp.gardenall.areader.model.MBook
+import jp.gardenall.areader.navigation.ReaderScreens
 import jp.gardenall.areader.screens.home.HomeScreenViewModel
+import jp.gardenall.areader.utils.formatDate
 
 @Composable
 fun BookUpdateScreen(
@@ -116,6 +129,7 @@ fun BookUpdateScreen(
 
 @Composable
 fun ShowSimpleForm(book: MBook, navController: NavHostController) {
+    val context = LocalContext.current
     val notesText = remember {
         mutableStateOf("")
     }
@@ -124,6 +138,9 @@ fun ShowSimpleForm(book: MBook, navController: NavHostController) {
     }
     val isFinishedReading = remember {
         mutableStateOf(false)
+    }
+    val ratingVal = remember {
+        mutableIntStateOf(0)
     }
 
     SimpleForm(
@@ -152,7 +169,7 @@ fun ShowSimpleForm(book: MBook, navController: NavHostController) {
                     )
                 }
             } else {
-                Text(text = "Started on: ${book.startedReading}") // Todo: format data
+                Text(text = "Started on: ${formatDate(book.startedReading!!)}") // Todo: format data
             }
         }
         
@@ -169,8 +186,85 @@ fun ShowSimpleForm(book: MBook, navController: NavHostController) {
                     Text(text = "Finished Reading!")
                 }
             } else {
-                Text(text = "Finished on: ${book.finishedReading}") // Todo: format
+                Text(text = "Finished on: ${formatDate(book.finishedReading!!)}") // Todo: format
             }
+        }
+    }
+
+    Text(
+        text = "Rating",
+        modifier = Modifier.padding(bottom = 3.dp)
+    )
+
+    book.rating?.toInt().let {
+        RatingBar(rating = it!!) { rating ->
+            ratingVal.intValue = rating
+        }
+    }
+
+    Spacer(modifier = Modifier.padding(bottom = 15.dp))
+
+    Row {
+        val changedNotes = book.notes != notesText.value
+        val changedRating = book.rating?.toInt() != ratingVal.intValue
+        val isFinishedTimeStamp = if (isFinishedReading.value) Timestamp.now() else book.finishedReading
+        val isStartedTimeStamp = if (isStartedReading.value) Timestamp.now() else book.startedReading
+
+        val bookUpdate = changedNotes || changedRating || isStartedReading.value || isFinishedReading.value
+
+        val bookToUpdate = hashMapOf(
+            "finished_reading_at" to isFinishedTimeStamp,
+            "started_reading_at" to isStartedTimeStamp,
+            "rating" to ratingVal.intValue,
+            "notes" to notesText.value
+        ).toMap()
+
+        RoundedButton("Update") {
+            if (bookUpdate) {
+                FirebaseFirestore.getInstance()
+                    .collection("books")
+                    .document(book.id!!)
+                    .update(bookToUpdate)
+                    .addOnCompleteListener {
+                        showToast(context, "Book Updated Successfully!")
+                        navController.navigate(ReaderScreens.ReaderHomeScreen.name)
+//                        Log.d("TAG", "ShowSimpleForm: ${task.result.toString()}")
+                    }
+                    .addOnFailureListener {
+                        Log.w("Error", "Error updating document", it)
+                    }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(100.dp))
+
+        val openDialog = remember {
+            mutableStateOf(false)
+        }
+        if (openDialog.value) {
+            ShowAlertDialog(
+                message = stringResource(id = R.string.sure) + "\n" + stringResource(id = R.string.action),
+                openDialog = openDialog
+            ) {
+                FirebaseFirestore.getInstance()
+                    .collection("books")
+                    .document(book.id!!)
+                    .delete()
+                    .addOnCompleteListener {
+                        if (it.isSuccessful) {
+                            openDialog.value = false
+                            /*
+                            Don't popBackStack() if we want the immediate recomposition of the MainScreen UI,
+                            instead navigate to hte MainScreen!
+                             */
+                            navController.navigate(ReaderScreens.ReaderHomeScreen.name)
+                        }
+                    }
+            }
+        }
+
+        RoundedButton("Delete") {
+            openDialog.value = true
         }
     }
 }
@@ -281,5 +375,30 @@ fun CardListItem(book: MBook, onPressDetails: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ShowAlertDialog(
+    message: String,
+    openDialog: MutableState<Boolean>,
+    onYesPressed: () -> Unit
+) {
+    if (openDialog.value) {
+        AlertDialog(
+            onDismissRequest = { openDialog.value = false },
+            title = { Text(text = "Delete Book") },
+            text = { Text(text = message) },
+            confirmButton = {
+                TextButton(onClick = { onYesPressed.invoke() }) {
+                    Text(text = "Yes")
+                }
+            } ,
+            dismissButton = {
+                TextButton(onClick = { openDialog.value = false }) {
+                    Text(text = "No")
+                }
+            }
+        )
     }
 }
